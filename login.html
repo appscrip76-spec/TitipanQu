@@ -245,8 +245,17 @@
 
         const hashedInputPassword = await hashPassword(pass);
         let users = JSON.parse(localStorage.getItem('titipanq_users') || '[]');
-        let validUser = users.find(u => u.username.toLowerCase() === user.toLowerCase() && u.password === hashedInputPassword);
+        
+        // Cek kecocokan password hash (sistem baru) ATAU password teks biasa (akun lama sebelum pembaruan)
+        let validUser = users.find(u => u.username.toLowerCase() === user.toLowerCase() && (u.password === hashedInputPassword || u.password === pass));
 
+        if (validUser) {
+            // Migrasi otomatis: Jika user masih menggunakan password teks biasa, update menjadi enkripsi (Hash)
+            if (validUser.password === pass) {
+                validUser.password = hashedInputPassword;
+                localStorage.setItem('titipanq_users', JSON.stringify(users));
+            }
+            
             // Set sesi user yang login
             localStorage.setItem('titipanq_loggedInUser', validUser.username);
 
