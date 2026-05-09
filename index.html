@@ -14,6 +14,10 @@
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="manifest" href="manifest.json">
     
+    <!-- Security Headers Meta -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+
     <!-- Meta Tags PWA -->
     <meta name="theme-color" content="#10b981">
     <meta name="mobile-web-app-capable" content="yes">
@@ -873,6 +877,20 @@
         handleYearFilterChange(true);
     }
 
+    // ================= XSS SANITIZER (KEAMANAN) =================
+    function escapeHTML(str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/[&<>'"]/g, 
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag)
+        );
+    }
+
     // ================= UI HELPERS =================
     function startLoading(text = "Memproses...") {
         document.getElementById('loadingText').innerText = text;
@@ -964,7 +982,7 @@
         currentData.modal_awal.forEach(m => {
             tbody.innerHTML += `<tr>
                 <td>${formatDate(m.tanggal)}</td><td class="text-dark fw-bold">${formatRp(m.nominal)}</td>
-                <td>${m.sumber || '-'}</td><td class="text-muted small">${m.catatan || '-'}</td>
+                <td>${escapeHTML(m.sumber) || '-'}</td><td class="text-muted small">${escapeHTML(m.catatan) || '-'}</td>
                 <td><div class="d-flex gap-1"><button class="btn btn-sm btn-light border text-primary" onclick='editData("Modal_Awal", ${JSON.stringify(m).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-light border text-danger" onclick="deleteData('Modal_Awal', '${m.id}')"><i class="fas fa-trash"></i></button></div></td>
             </tr>`;
         });
@@ -977,8 +995,8 @@
         if (dataPemasukan.length === 0) { tbody.innerHTML = getEmptyRowHtml(5); return; }
         dataPemasukan.forEach(t => {
             tbody.innerHTML += `<tr>
-                <td>${formatDate(t.tanggal)}</td><td><span class="badge bg-light border text-dark">${t.kategori}</span></td>
-                <td class="text-primary fw-bold">+${formatRp(t.nominal)}</td><td class="text-muted small">${t.catatan || '-'}</td>
+                <td>${formatDate(t.tanggal)}</td><td><span class="badge bg-light border text-dark">${escapeHTML(t.kategori)}</span></td>
+                <td class="text-primary fw-bold">+${formatRp(t.nominal)}</td><td class="text-muted small">${escapeHTML(t.catatan) || '-'}</td>
                 <td><div class="d-flex gap-1"><button class="btn btn-sm btn-light border text-primary" onclick='editData("Transaksi_Kas", ${JSON.stringify(t).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-light border text-danger" onclick="deleteData('Transaksi_Kas', '${t.id}')"><i class="fas fa-trash"></i></button></div></td>
             </tr>`;
         });
@@ -991,8 +1009,8 @@
         if (dataPengeluaran.length === 0) { tbody.innerHTML = getEmptyRowHtml(5); return; }
         dataPengeluaran.forEach(t => {
             tbody.innerHTML += `<tr>
-                <td>${formatDate(t.tanggal)}</td><td><span class="badge bg-light border text-dark">${t.kategori}</span></td>
-                <td class="text-danger fw-bold">-${formatRp(t.nominal)}</td><td class="text-muted small">${t.catatan || '-'}</td>
+                <td>${formatDate(t.tanggal)}</td><td><span class="badge bg-light border text-dark">${escapeHTML(t.kategori)}</span></td>
+                <td class="text-danger fw-bold">-${formatRp(t.nominal)}</td><td class="text-muted small">${escapeHTML(t.catatan) || '-'}</td>
                 <td><div class="d-flex gap-1"><button class="btn btn-sm btn-light border text-primary" onclick='editData("Transaksi_Kas", ${JSON.stringify(t).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-light border text-danger" onclick="deleteData('Transaksi_Kas', '${t.id}')"><i class="fas fa-trash"></i></button></div></td>
             </tr>`;
         });
@@ -1005,7 +1023,7 @@
         currentData.produk.forEach(p => {
             const badgeClass = p.status_aktif === 'Aktif' ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary';
             tbody.innerHTML += `<tr>
-                <td><strong>${p.nama_produk}</strong><br><small class="text-muted">${p.bahan||'-'}</small></td>
+                <td><strong>${escapeHTML(p.nama_produk)}</strong><br><small class="text-muted">${escapeHTML(p.bahan)||'-'}</small></td>
                 <td>${formatRp(p.harga_titip)}</td><td><span class="badge ${badgeClass} border-0">${p.status_aktif}</span></td>
                 <td><div class="d-flex gap-1"><button class="btn btn-sm btn-light border text-primary" onclick='editData("Produk", ${JSON.stringify(p).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-light border text-danger" onclick="deleteData('Produk', '${p.id}')"><i class="fas fa-trash"></i></button></div></td>
             </tr>`;
@@ -1040,11 +1058,11 @@
         filteredData.forEach(t => {
             uniqueProducts.add(t.id_produk);
             const prod = currentData.produk.find(x => x.id == t.id_produk);
-            const namaProduk = prod ? prod.nama_produk : (t.id_produk || 'Dihapus');
+            const namaProduk = escapeHTML(prod ? prod.nama_produk : (t.id_produk || 'Dihapus'));
             grandTotalBelumCair += Number(t.total_hasil) || 0;
             
             tbody.innerHTML += `<tr>
-                <td class="small text-muted">${formatDate(t.tanggal_kirim)}</td><td><strong>${t.nama_warung}</strong></td>
+                <td class="small text-muted">${formatDate(t.tanggal_kirim)}</td><td><strong>${escapeHTML(t.nama_warung)}</strong></td>
                 <td>${namaProduk}</td><td>${t.jumlah_kirim}</td><td class="text-primary fw-bold">${t.jumlah_terjual}</td>
                 <td>${t.sisa_barang}</td><td class="text-success fw-bold">${formatRp(t.total_hasil)}</td>
                 <td><span class="badge bg-warning-subtle text-warning-emphasis">${t.status_pencairan}</span></td>
@@ -1057,7 +1075,7 @@
             let priceTexts = [];
             uniqueProducts.forEach(prodId => {
                 const prod = currentData.produk.find(x => x.id == prodId || x.nama_produk == prodId);
-                if (prod) priceTexts.push(`<span class="text-dark fw-bold">${prod.nama_produk}</span>: ${formatRp(prod.harga_titip)}`);
+                if (prod) priceTexts.push(`<span class="text-dark fw-bold">${escapeHTML(prod.nama_produk)}</span>: ${formatRp(prod.harga_titip)}`);
             });
             if (priceTexts.length > 0) {
                 infoHargaEl.innerHTML = `<i class="fas fa-tags text-primary me-2"></i> Ket. Harga Titip: &nbsp; ${priceTexts.join('<span class="mx-2 text-muted">|</span>')}`;
@@ -1071,7 +1089,7 @@
             if (savedProfile) {
                 try {
                     const p = JSON.parse(savedProfile);
-                    if (p.bank || p.rek) paymentInfo = `Pembayaran via transfer: <strong>${p.bank || ''} ${p.rek || ''}</strong> a.n <strong>${p.an || ''}</strong>`;
+                    if (p.bank || p.rek) paymentInfo = `Pembayaran via transfer: <strong>${escapeHTML(p.bank) || ''} ${escapeHTML(p.rek) || ''}</strong> a.n <strong>${escapeHTML(p.an) || ''}</strong>`;
                 } catch(e){}
             }
             tfoot.innerHTML = `<tr>
@@ -1163,13 +1181,13 @@
 
         filteredData.forEach(t => {
             const prod = currentData.produk.find(x => x.id == t.id_produk || x.nama_produk == t.id_produk);
-            const namaProduk = prod ? prod.nama_produk : (t.id_produk || '-');
+            const namaProduk = escapeHTML(prod ? prod.nama_produk : (t.id_produk || '-'));
             const hargaTitip = prod ? (Number(prod.harga_titip) || 0) : 0;
             const totalTagihan = Number(t.jumlah_terjual) * hargaTitip;
             grandTotal += totalTagihan;
 
             tbody.innerHTML += `<tr>
-                <td class="small text-muted">${formatDate(t.tanggal_kirim)}</td><td><strong>${t.nama_warung}</strong></td>
+                <td class="small text-muted">${formatDate(t.tanggal_kirim)}</td><td><strong>${escapeHTML(t.nama_warung)}</strong></td>
                 <td>${namaProduk}</td><td>${t.jumlah_kirim}</td><td class="text-primary fw-bold">${t.jumlah_terjual}</td>
                 <td>${formatRp(hargaTitip)}</td><td class="text-success fw-bold">${formatRp(totalTagihan)}</td>
                 <td data-html2canvas-ignore="true"><button class="btn btn-sm btn-light border text-danger shadow-sm" onclick="deleteData('Titipan', '${t.id}')" title="Hapus Riwayat"><i class="fas fa-trash"></i></button></td>
@@ -1195,7 +1213,7 @@
         if (currentData.pencairan.length === 0) { tbody.innerHTML = getEmptyRowHtml(4); return; }
         currentData.pencairan.forEach(p => {
             tbody.innerHTML += `<tr>
-                <td>${formatDate(p.tanggal)}</td><td class="text-success fw-bold">${formatRp(p.nominal)}</td><td class="text-muted small">${p.catatan || '-'}</td>
+                <td>${formatDate(p.tanggal)}</td><td class="text-success fw-bold">${formatRp(p.nominal)}</td><td class="text-muted small">${escapeHTML(p.catatan) || '-'}</td>
                 <td><div class="d-flex gap-1"><button class="btn btn-sm btn-light border text-primary" onclick='editData("Pencairan", ${JSON.stringify(p).replace(/'/g, "&apos;")})'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-light border text-danger" onclick="deleteData('Pencairan', '${p.id}')"><i class="fas fa-trash"></i></button></div></td>
             </tr>`;
         });
