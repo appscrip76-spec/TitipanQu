@@ -1,0 +1,21 @@
+{
+  "name": "TitipanQ - Warung Pintar",
+  "short_name": "TitipanQ",
+  "description": "Aplikasi kelola barang titipan warung",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

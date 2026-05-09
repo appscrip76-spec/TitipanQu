@@ -6,7 +6,8 @@
     <title>Login - TitipanQ</title>
     
     <!-- Favicon & Meta -->
-    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/512/shopping-basket.png">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#10b981">
 
     <!-- Fonts & CSS Frameworks -->
@@ -77,12 +78,12 @@
             <!-- Area Card Login -->
             <div class="card login-card border-0 bg-white p-4 p-md-5">
                 <div class="text-center mb-4">
-                    <i class="fas fa-shopping-basket brand-icon mb-3"></i>
-                    <h4 class="fw-bold text-slate-800 mb-1">Masuk ke TitipanQ</h4>
-                    <p class="text-muted small">Kelola warung pintar Anda dengan mudah</p>
+                    <img src="logo.png" alt="Logo" class="mb-3" style="width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.2));">
+                    <h4 class="fw-bold text-slate-800 mb-1" id="authTitle">Masuk ke TitipanQ</h4>
+                    <p class="text-muted small" id="authSubtitle">Kelola warung pintar Anda dengan mudah</p>
                 </div>
 
-                <form onsubmit="handleLogin(event)">
+                <form id="formLogin" onsubmit="handleLogin(event)">
                     <div class="mb-3">
                         <label class="form-label small fw-semibold text-muted">Email / Username</label>
                         <div class="input-group">
@@ -115,8 +116,32 @@
                     </button>
                 </form>
                 
+                <!-- Form Register (Disembunyikan default) -->
+                <form id="formRegister" onsubmit="handleRegisterSubmit(event)" class="d-none">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Buat Username Baru</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-end-0 bg-transparent"><i class="fas fa-user text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0" id="regUsername" placeholder="Ketik username baru" required minlength="4">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold text-muted">Buat Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-end-0 bg-transparent"><i class="fas fa-lock text-muted"></i></span>
+                            <input type="password" class="form-control border-start-0 border-end-0 ps-0" id="regPassword" placeholder="Ketik password Anda" required minlength="4">
+                            <span class="input-group-text bg-transparent password-toggle border-start-0" onclick="togglePassword('regPassword', 'regToggleIcon')" title="Tampilkan Password">
+                                <i class="fas fa-eye text-muted" id="regToggleIcon"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-login w-100 text-white shadow-sm mb-3">
+                        <i class="fas fa-user-plus me-2"></i> Daftar Akun
+                    </button>
+                </form>
+
                 <div class="text-center mt-2">
-                    <p class="small text-muted mb-0">Belum punya akun? <a href="#" class="text-success fw-bold text-decoration-none" onclick="handleRegister(event)">Daftar Gratis</a></p>
+                    <p class="small text-muted mb-0" id="authSwitchText">Belum punya akun? <a href="#" class="text-success fw-bold text-decoration-none" onclick="switchAuthMode(event, 'register')">Daftar Gratis</a></p>
                 </div>
             </div>
             <!-- Footer -->
@@ -129,9 +154,9 @@
 
 <!-- Script untuk Interaksi Form -->
 <script>
-    function togglePassword() {
-        const passwordInput = document.getElementById('password');
-        const toggleIcon = document.getElementById('toggleIcon');
+    function togglePassword(inputId = 'password', iconId = 'toggleIcon') {
+        const passwordInput = document.getElementById(inputId);
+        const toggleIcon = document.getElementById(iconId);
         
         if (passwordInput.type === 'password') {
             passwordInput.type = 'text';
@@ -144,25 +169,67 @@
         }
     }
 
-    function handleRegister(event) {
+    function switchAuthMode(event, mode) {
         event.preventDefault();
-        Swal.fire('Informasi', 'Sistem ini masih berjalan secara lokal (Local Storage). Anda tidak perlu mendaftar. Silakan isi Username & Password secara bebas lalu klik "Masuk Sekarang" untuk masuk ke Dashboard!', 'info');
+        if(mode === 'register') {
+            document.getElementById('formLogin').classList.add('d-none');
+            document.getElementById('formRegister').classList.remove('d-none');
+            document.getElementById('authTitle').innerText = 'Daftar Akun Baru';
+            document.getElementById('authSubtitle').innerText = 'Buat akun Anda secara gratis di perangkat ini';
+            document.getElementById('authSwitchText').innerHTML = 'Sudah punya akun? <a href="#" class="text-success fw-bold text-decoration-none" onclick="switchAuthMode(event, \'login\')">Masuk di sini</a>';
+        } else {
+            document.getElementById('formRegister').classList.add('d-none');
+            document.getElementById('formLogin').classList.remove('d-none');
+            document.getElementById('authTitle').innerText = 'Masuk ke TitipanQ';
+            document.getElementById('authSubtitle').innerText = 'Kelola warung pintar Anda dengan mudah';
+            document.getElementById('authSwitchText').innerHTML = 'Belum punya akun? <a href="#" class="text-success fw-bold text-decoration-none" onclick="switchAuthMode(event, \'register\')">Daftar Gratis</a>';
+        }
+    }
+
+    function handleRegisterSubmit(event) {
+        event.preventDefault();
+        const user = document.getElementById('regUsername').value.trim();
+        const pass = document.getElementById('regPassword').value;
+
+        let users = JSON.parse(localStorage.getItem('titipanq_users') || '[]');
+        if(users.find(u => u.username.toLowerCase() === user.toLowerCase())) {
+            Swal.fire('Gagal', 'Username sudah terdaftar. Silakan gunakan yang lain.', 'error');
+            return;
+        }
+
+        users.push({ username: user, password: pass });
+        localStorage.setItem('titipanq_users', JSON.stringify(users));
+
+        Swal.fire('Berhasil!', 'Akun Anda berhasil dibuat. Silakan login.', 'success').then(() => {
+            switchAuthMode({preventDefault:()=>{}}, 'login');
+            document.getElementById('username').value = user;
+            document.getElementById('password').value = '';
+        });
     }
 
     function handleLogin(event) {
         event.preventDefault();
         
-        const btn = document.querySelector('.btn-login');
-        const originalText = btn.innerHTML;
-        
-        // Efek loading saat ditekan
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
-        btn.disabled = true;
-        
-        // Simulasi autentikasi (redirect otomatis ke index.html)
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1200);
+        const user = document.getElementById('username').value.trim();
+        const pass = document.getElementById('password').value;
+
+        let users = JSON.parse(localStorage.getItem('titipanq_users') || '[]');
+        let validUser = users.find(u => u.username.toLowerCase() === user.toLowerCase() && u.password === pass);
+
+        if (validUser) {
+            const btn = document.querySelector('#formLogin .btn-login');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
+            btn.disabled = true;
+            
+            // Set sesi user yang login
+            localStorage.setItem('titipanq_loggedInUser', validUser.username);
+
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        } else {
+            Swal.fire('Gagal', 'Username atau Password salah! Silakan periksa kembali atau Daftar Gratis jika belum punya akun.', 'error');
+        }
     }
 </script>
 
