@@ -99,7 +99,7 @@
                     <div class="mb-4">
                         <label class="form-label small fw-semibold text-muted d-flex justify-content-between w-100">
                             <span>Password</span>
-                            <a href="#" class="text-success text-decoration-none" onclick="Swal.fire('Info', 'Karena aplikasi berjalan lokal dan terenkripsi, hubungi admin untuk reset data memori Anda.', 'info')">Lupa Password?</a>
+                            <a href="#" class="text-success text-decoration-none" onclick="handleForgotPassword(event)">Lupa Password?</a>
                         </label>
                         <div class="input-group">
                             <span class="input-group-text border-end-0 bg-transparent"><i class="fas fa-lock text-muted"></i></span>
@@ -233,6 +233,49 @@
         });
     }
 
+    async function handleForgotPassword(event) {
+        event.preventDefault();
+        const { value: inputUsername } = await Swal.fire({
+            title: 'Lupa Password',
+            text: 'Masukkan Username Anda untuk mereset password:',
+            input: 'text',
+            inputPlaceholder: 'Ketik username Anda...',
+            showCancelButton: true,
+            confirmButtonText: 'Cari Akun',
+            cancelButtonText: 'Batal'
+        });
+
+        if (inputUsername) {
+            let users = JSON.parse(localStorage.getItem('titipanq_users') || '[]');
+            let rawUser = inputUsername.trim().toLowerCase();
+            let sanitizedUser = rawUser.replace(/[^a-zA-Z0-9_.-]/g, '');
+            
+            let userIndex = users.findIndex(u => u.username.toLowerCase() === rawUser || u.username.toLowerCase() === sanitizedUser);
+
+            if (userIndex !== -1) {
+                const { value: newPass } = await Swal.fire({
+                    title: 'Buat Password Baru',
+                    input: 'password',
+                    inputPlaceholder: 'Minimal 6 karakter',
+                    inputAttributes: { minlength: 6, autocapitalize: 'off', autocorrect: 'off' },
+                    showCancelButton: true,
+                    confirmButtonText: 'Simpan Password',
+                    cancelButtonText: 'Batal'
+                });
+
+                if (newPass && newPass.length >= 6) {
+                    users[userIndex].password = await hashPassword(newPass);
+                    localStorage.setItem('titipanq_users', JSON.stringify(users));
+                    Swal.fire('Berhasil!', 'Password Anda berhasil direset. Silakan login menggunakan password baru.', 'success');
+                } else if (newPass) {
+                    Swal.fire('Gagal', 'Password harus minimal 6 karakter!', 'error');
+                }
+            } else {
+                Swal.fire('Tidak Ditemukan', 'Username tersebut tidak terdaftar di perangkat ini.', 'error');
+            }
+        }
+    }
+
     async function handleLogin(event) {
         event.preventDefault();
         
@@ -240,14 +283,18 @@
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
         btn.disabled = true;
 
-        const user = document.getElementById('username').value.replace(/[^a-zA-Z0-9_.-]/g, '');
+        const rawUser = document.getElementById('username').value.trim();
+        const sanitizedUser = rawUser.replace(/[^a-zA-Z0-9_.-]/g, '');
         const pass = document.getElementById('password').value;
 
         const hashedInputPassword = await hashPassword(pass);
         let users = JSON.parse(localStorage.getItem('titipanq_users') || '[]');
         
-        // Cek kecocokan password hash (sistem baru) ATAU password teks biasa (akun lama sebelum pembaruan)
-        let validUser = users.find(u => u.username.toLowerCase() === user.toLowerCase() && (u.password === hashedInputPassword || u.password === pass));
+        // Pencarian user mendukung username yang memiliki spasi (akun lama) maupun yang sudah disanitasi
+        let validUser = users.find(u => 
+            (u.username.toLowerCase() === rawUser.toLowerCase() || u.username.toLowerCase() === sanitizedUser.toLowerCase()) && 
+            (u.password === hashedInputPassword || u.password === pass)
+        );
 
         if (validUser) {
             // Migrasi otomatis: Jika user masih menggunakan password teks biasa, update menjadi enkripsi (Hash)

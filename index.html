@@ -186,6 +186,9 @@
             </li>
             <div class="px-4 mt-4 mb-2 text-uppercase stat-title text-secondary" style="font-size: 0.65rem;">Pengaturan</div>
             <li class="nav-item">
+                <a class="nav-link text-warning" onclick="openModal('modalGantiPassword')"><i class="fas fa-key"></i> Ganti Password</a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link text-danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Keluar Akun</a>
             </li>
         </ul>
@@ -656,6 +659,23 @@
   </div>
 </div>
 
+<!-- Modal Ganti Password -->
+<div class="modal fade" id="modalGantiPassword" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <form id="formGantiPassword" onsubmit="handleGantiPassword(event)">
+      <div class="modal-header bg-light border-0"><h5 class="modal-title fw-bold">Ganti Password Akun</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body p-4">
+        <div class="mb-3"><label class="form-label fw-medium">Password Lama</label><input type="password" class="form-control bg-light border-0" id="gp_pass_lama" placeholder="Masukkan password saat ini" required></div>
+        <div class="mb-3"><label class="form-label fw-medium">Password Baru</label><input type="password" class="form-control bg-light border-0" id="gp_pass_baru" placeholder="Minimal 6 karakter" required minlength="6"></div>
+        <div class="mb-3"><label class="form-label fw-medium">Konfirmasi Password Baru</label><input type="password" class="form-control bg-light border-0" id="gp_pass_konfirmasi" placeholder="Ketik ulang password baru" required minlength="6"></div>
+      </div>
+      <div class="modal-footer border-0"><button type="submit" class="btn btn-warning px-4 fw-bold">Update Password</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <!-- Bootstrap JS -->
@@ -689,6 +709,45 @@
                 window.location.href = 'login.html';
             }
         });
+    }
+
+    // ================= FUNGSI GANTI PASSWORD =================
+    async function hashPassword(password) {
+        const msgBuffer = new TextEncoder().encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function handleGantiPassword(event) {
+        event.preventDefault();
+        const passLama = document.getElementById('gp_pass_lama').value;
+        const passBaru = document.getElementById('gp_pass_baru').value;
+        const passKonfirm = document.getElementById('gp_pass_konfirmasi').value;
+
+        if (passBaru !== passKonfirm) {
+            Swal.fire('Gagal', 'Konfirmasi password baru tidak cocok!', 'error');
+            return;
+        }
+
+        let users = JSON.parse(localStorage.getItem('titipanq_users') || '[]');
+        let userIndex = users.findIndex(u => u.username === loggedInUser);
+
+        if (userIndex !== -1) {
+            const hashedLama = await hashPassword(passLama);
+            // Cek kebenaran password lama
+            if (users[userIndex].password === hashedLama || users[userIndex].password === passLama) {
+                users[userIndex].password = await hashPassword(passBaru);
+                localStorage.setItem('titipanq_users', JSON.stringify(users));
+                
+                Swal.fire('Berhasil', 'Password berhasil diperbarui!', 'success').then(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('modalGantiPassword')).hide();
+                    document.getElementById('formGantiPassword').reset();
+                });
+            } else {
+                Swal.fire('Gagal', 'Password lama salah!', 'error');
+            }
+        }
     }
 
     // ================= LOCAL DATABASE ENGINE (LOCALSTORAGE) =================
